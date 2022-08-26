@@ -41,6 +41,8 @@ contract NftMarketplace is ReentrancyGuard {
     );
 
     // State Variables
+    // - Contracts (Collections) listed
+    address[] private contracts;
     // - Contract Address => (tokenId => Listing)
     mapping(address => mapping(uint256 => Listing)) private s_listings;
     // - Sellers address => AmountInSales
@@ -164,6 +166,10 @@ contract NftMarketplace is ReentrancyGuard {
         returns (Listing memory)
     {
         return s_listings[nftAddress][tokenId];
+    }
+
+    function getAllListedNfts() public view {
+        for (uint i = 0; i < contracts.length; i++) {}
     }
 
     function getProceeds(address seller) external view returns (uint256) {
