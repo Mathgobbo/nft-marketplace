@@ -15,8 +15,8 @@ async function main() {
   const basicNft2 = await basicNftFactory2.deploy();
   await basicNft.deployed();
 
-  // const mintTx = await basicNft.connect(owner).mintNft();
-  // const mintTxReceipt = await mintTx.wait(1);
+  const mintTx = await basicNft.connect(owner).mintNft();
+  const mintTxReceipt = await mintTx.wait(1);
 
   // const tx = await basicNft.connect(owner).approve(nftMarketplace.address, 0);
   // await tx.wait(1);

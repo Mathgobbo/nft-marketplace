@@ -3,6 +3,7 @@ import { Contract, ethers, Signer } from "ethers";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { NFT_MARKETPLACE_ADDRESS } from "../configs/constants";
 import NftMarketplaceABI from "../assets/NftMarketplace.json";
+import { NoMetaMaskError } from "../errors/NoMetaMaskError";
 interface IProps {
   children: ReactNode;
 }
@@ -13,6 +14,7 @@ interface Web3ContextProps {
   nftMarketplaceContract: Contract | undefined;
   requestWalletConnection: () => Promise<void>;
   account: any;
+  error: Error | null;
 }
 
 const Web3Context = createContext<Web3ContextProps>({} as Web3ContextProps);
@@ -22,12 +24,16 @@ export const Web3ContextProvider = ({ children }: IProps) => {
   const [signer, setSigner] = useState<Signer>();
   const [nftMarketplaceContract, setNftMarketplaceContract] = useState<Contract>();
   const [account, setAccount] = useState();
-  const [error, setError] = useState({ name: "", message: "" });
+  const [error, setError] = useState<Error | null>(null);
 
   const verifyProviderAndAccount = async () => {
     const { ethereum } = window as any;
-    if (!ethereum) return setError({ name: "no-wallet", message: "Get a wallet" });
+    if (!ethereum) {
+      setProvider(new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545"));
+      return setError(new NoMetaMaskError());
+    }
     setProvider(new ethers.providers.Web3Provider(ethereum));
+    listenAccountChanges();
     const allAccounts = await ethereum.request({ method: "eth_accounts" });
     if (allAccounts.length !== 0) {
       const account = allAccounts[0];
@@ -37,9 +43,16 @@ export const Web3ContextProvider = ({ children }: IProps) => {
 
   const requestWalletConnection = async () => {
     const { ethereum } = window as any;
-    if (!ethereum) return setError({ name: "no-wallet", message: "Get a wallet" });
-    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-    setAccount(accounts[0]);
+    if (!ethereum && error != null) return setError(new NoMetaMaskError());
+    await ethereum.request({ method: "eth_requestAccounts" });
+  };
+
+  const listenAccountChanges = async () => {
+    const { ethereum } = window as any;
+    ethereum.on("accountsChanged", (accounts: any) => {
+      if (accounts.length !== 0) setAccount(accounts[0]);
+      else setAccount(undefined);
+    });
   };
 
   useEffect(() => {
@@ -56,7 +69,7 @@ export const Web3ContextProvider = ({ children }: IProps) => {
   }, [provider]);
 
   return (
-    <Web3Context.Provider value={{ provider, signer, nftMarketplaceContract, requestWalletConnection, account }}>
+    <Web3Context.Provider value={{ provider, signer, nftMarketplaceContract, requestWalletConnection, account, error }}>
       {children}
     </Web3Context.Provider>
   );

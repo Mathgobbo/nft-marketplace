@@ -67,7 +67,7 @@ describe("DAPP NFT Marketplace Tests", () => {
     it("Buyer should buy NFT ", async () => {
       const tx = await nftMarketplace
         .connect(buyer1)
-        .buyItem(1, basicNft.address, nft1TokenId, { value: ethers.utils.parseEther("0.1") });
+        .buyItem(basicNft.address, nft1TokenId, { value: ethers.utils.parseEther("0.1") });
       await tx.wait();
       const newOwner = await basicNft.ownerOf(nft1TokenId);
       const contractBalance = await ethers.provider.getBalance(nftMarketplace.address);
@@ -83,6 +83,18 @@ describe("DAPP NFT Marketplace Tests", () => {
       newOwnerBalance.sub(ethers.utils.parseEther("0.01"));
       ownerBalance.add(ownerProceeds);
       expect(newOwnerBalance).to.be.greaterThan(ownerBalance);
+    });
+
+    it("Should List and cancel Listing", async () => {
+      const listPrice = ethers.utils.parseEther("0.1");
+      const approveTx = await basicNft.connect(buyer1).approve(nftMarketplace.address, nft1TokenId);
+      await approveTx.wait(1);
+      const tx = await nftMarketplace.connect(buyer1).listItem(basicNft.address, nft1TokenId, listPrice);
+      await tx.wait();
+
+      await nftMarketplace.connect(buyer1).cancelListing(basicNft.address, nft1TokenId);
+      const listingTx = await nftMarketplace.getListing(1);
+      expect(listingTx.price).to.be.equals(0);
     });
   });
 });

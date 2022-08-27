@@ -10,6 +10,7 @@ export const Home = () => {
   const getListedItems = async () => {
     try {
       setLoading(true);
+      console.log(nftMarketplaceContract);
       const response = await nftMarketplaceContract?.getAllItemsListed();
       setNfts(response);
     } catch (err) {
@@ -49,8 +50,10 @@ export const Home = () => {
       <button onClick={listNft}>List your NFT</button>
       <button onClick={mintNft}>Mint example NFT</button>
       {loading && <p>Loading...</p>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {!!nfts && !!nfts.length && nfts.map((nft: any) => <NFTCard key={nft?.tokenId} {...nft} />)}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {!!nfts &&
+          !!nfts.length &&
+          nfts.map((nft: any) => <NFTCard key={nft?.tokenId} {...nft} refetchListedItems={getListedItems} />)}
       </div>
     </div>
   );
@@ -61,13 +64,15 @@ interface NFTCardProps {
   price: BigNumber;
   seller: string;
   tokenId: BigNumber;
+  refetchListedItems: () => Promise<void>;
 }
-const NFTCard = ({ contractAddress, price, seller, tokenId }: NFTCardProps) => {
+const NFTCard = ({ contractAddress, price, seller, tokenId, refetchListedItems }: NFTCardProps) => {
   const { nftMarketplaceContract, account } = useWeb3();
   const cancelListing = async () => {
     const tx = await nftMarketplaceContract?.cancelListing(contractAddress, tokenId);
     await tx.wait();
     console.log(tx);
+    refetchListedItems();
   };
 
   return (
@@ -83,7 +88,7 @@ const NFTCard = ({ contractAddress, price, seller, tokenId }: NFTCardProps) => {
         <strong>Price:</strong> {ethers.utils.formatEther(price)} Ether
       </p>
 
-      {seller.toLowerCase() === account.toLowerCase() && (
+      {seller?.toLowerCase() === account?.toLowerCase() && (
         <button onClick={cancelListing} className="border rounded-md p-2">
           Cancel listing
         </button>

@@ -20,10 +20,9 @@ contract NftMarketplace is ReentrancyGuard {
     struct ListedItem {
         uint256 listedId;
         uint256 tokenId;
-        address contractAddress;
         uint256 price;
+        address contractAddress;
         address seller;
-        bool forSale;
     }
 
     //Events
@@ -46,15 +45,16 @@ contract NftMarketplace is ReentrancyGuard {
     );
 
     // State Variables
-    // - ListedItems Array
-    ListedItem[] private listedItems;
-    // - Sellers address => AmountInSales
-    mapping(address => uint256) private s_proceeds;
-
     using Counters for Counters.Counter;
     Counters.Counter private _totalNftsListed;
     Counters.Counter private _listId;
+    // Contract Address => TokenId => ListedId
+    mapping(address => mapping(uint256 => uint256))
+        private _nftAddressAndTokenIdToListedId;
+    // ListedId => NFT
     mapping(uint256 => ListedItem) private listedNfts;
+    // - Sellers address => AmountInSales
+    mapping(address => uint256) private s_proceeds;
 
     // Function Modifiers
     modifier notListed(
@@ -62,18 +62,8 @@ contract NftMarketplace is ReentrancyGuard {
         uint256 tokenId,
         address owner
     ) {
-        ListedItem memory listing;
-        for (uint i = 0; i < listedItems.length; i++) {
-            if (
-                listedItems[i].contractAddress == nftAddress &&
-                listedItems[i].tokenId == tokenId
-            ) {
-                listing = listedItems[i];
-            }
-        }
-        if (listing.price > 0) {
+        if (_nftAddressAndTokenIdToListedId[nftAddress][tokenId] != 0)
             revert AlreadyListed(nftAddress, tokenId);
-        }
         _;
     }
     modifier isOwner(
@@ -88,15 +78,12 @@ contract NftMarketplace is ReentrancyGuard {
         }
         _;
     }
-    modifier isListed(
-        uint256 listedId,
-        address nftAddress,
-        uint256 tokenId
-    ) {
-        ListedItem memory listing = listedNfts[listedId];
-        if (listing.price <= 0) {
-            revert NotListed(nftAddress, tokenId);
-        }
+    modifier isListed(address nftAddress, uint256 tokenId) {
+        uint256 _listedId = _nftAddressAndTokenIdToListedId[nftAddress][
+            tokenId
+        ];
+        if (_listedId == 0) revert NotListed(nftAddress, tokenId);
+
         _;
     }
 
@@ -118,43 +105,43 @@ contract NftMarketplace is ReentrancyGuard {
             revert NotApprovedForMarketplace();
         }
 
-        // listedItems.push(
-        //     ListedItem(tokenId, nftAddress, price, msg.sender, true)
-        // );
         _totalNftsListed.increment();
         _listId.increment();
+
         uint256 _currentListId = _listId.current();
+        _nftAddressAndTokenIdToListedId[nftAddress][tokenId] = _currentListId;
         listedNfts[_currentListId] = ListedItem(
             _currentListId,
             tokenId,
-            nftAddress,
             price,
-            msg.sender,
-            true
+            nftAddress,
+            msg.sender
         );
 
         emit ItemListed(msg.sender, nftAddress, tokenId, price);
     }
 
-    function cancelListing(
-        uint256 listedId,
-        address nftAddress,
-        uint256 tokenId
-    )
+    function cancelListing(address nftAddress, uint256 tokenId)
         external
         isOwner(nftAddress, tokenId, msg.sender)
-        isListed(listedId, nftAddress, tokenId)
+        isListed(nftAddress, tokenId)
     {
-        delete (listedNfts[listedId]);
+        uint256 _listedId = _nftAddressAndTokenIdToListedId[nftAddress][
+            tokenId
+        ];
+        delete (listedNfts[_listedId]);
+        delete (_nftAddressAndTokenIdToListedId[nftAddress][tokenId]);
         _totalNftsListed.decrement();
         emit ItemCanceled(msg.sender, nftAddress, tokenId);
     }
 
-    function buyItem(
-        uint256 listedId,
-        address nftAddress,
-        uint256 tokenId
-    ) external payable isListed(listedId, nftAddress, tokenId) nonReentrant {
+    function buyItem(address nftAddress, uint256 tokenId)
+        external
+        payable
+        isListed(nftAddress, tokenId)
+        nonReentrant
+    {
+        uint256 listedId = _nftAddressAndTokenIdToListedId[nftAddress][tokenId];
         ListedItem memory listedItem = listedNfts[listedId];
         if (msg.value < listedItem.price) {
             revert PriceNotMet(nftAddress, tokenId, listedItem.price);
@@ -168,25 +155,25 @@ contract NftMarketplace is ReentrancyGuard {
         );
 
         delete (listedNfts[listedId]);
+        delete (_nftAddressAndTokenIdToListedId[nftAddress][tokenId]);
         _totalNftsListed.decrement();
         emit ItemBought(msg.sender, nftAddress, tokenId, listedItem.price);
     }
 
     function updateListing(
-        uint256 listedId,
         address nftAddress,
         uint256 tokenId,
         uint256 newPrice
     )
         external
-        isListed(listedId, nftAddress, tokenId)
+        isListed(nftAddress, tokenId)
         nonReentrant
         isOwner(nftAddress, tokenId, msg.sender)
     {
         if (newPrice == 0) {
             revert PriceMustBeAboveZero();
         }
-
+        uint256 listedId = _nftAddressAndTokenIdToListedId[nftAddress][tokenId];
         listedNfts[listedId].price = newPrice;
         emit ItemListed(msg.sender, nftAddress, tokenId, newPrice);
     }
@@ -212,8 +199,8 @@ contract NftMarketplace is ReentrancyGuard {
 
     function getAllItemsListed() public view returns (ListedItem[] memory) {
         uint256 resultCount;
-        for (uint i = 0; i < _totalNftsListed.current(); i++) {
-            if (listedNfts[i + 1].forSale) {
+        for (uint i = 0; i < _listId.current(); i++) {
+            if (listedNfts[i + 1].price > 0) {
                 resultCount++;
             }
         }
@@ -221,7 +208,7 @@ contract NftMarketplace is ReentrancyGuard {
         uint256 j;
 
         for (uint i = 0; i < _totalNftsListed.current(); i++) {
-            if (listedNfts[i + 1].forSale) {
+            if (listedNfts[i + 1].price > 0) {
                 items[j] = listedNfts[i + 1];
                 j++;
             }
