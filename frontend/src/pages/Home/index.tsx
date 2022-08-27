@@ -68,8 +68,16 @@ interface NFTCardProps {
 }
 const NFTCard = ({ contractAddress, price, seller, tokenId, refetchListedItems }: NFTCardProps) => {
   const { nftMarketplaceContract, account } = useWeb3();
+
   const cancelListing = async () => {
     const tx = await nftMarketplaceContract?.cancelListing(contractAddress, tokenId);
+    await tx.wait();
+    console.log(tx);
+    refetchListedItems();
+  };
+
+  const buyNft = async () => {
+    const tx = await nftMarketplaceContract?.buyItem(contractAddress, tokenId, { value: price });
     await tx.wait();
     console.log(tx);
     refetchListedItems();
@@ -88,9 +96,13 @@ const NFTCard = ({ contractAddress, price, seller, tokenId, refetchListedItems }
         <strong>Price:</strong> {ethers.utils.formatEther(price)} Ether
       </p>
 
-      {seller?.toLowerCase() === account?.toLowerCase() && (
+      {seller?.toLowerCase() === account?.toLowerCase() ? (
         <button onClick={cancelListing} className="border rounded-md p-2">
           Cancel listing
+        </button>
+      ) : (
+        <button onClick={buyNft} className="border rounded-md p-2">
+          Buy NFT
         </button>
       )}
     </div>
