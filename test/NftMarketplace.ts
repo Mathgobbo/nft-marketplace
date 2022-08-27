@@ -60,14 +60,14 @@ describe("DAPP NFT Marketplace Tests", () => {
       const tx = await nftMarketplace.connect(owner).listItem(basicNft.address, nft1TokenId, listPrice);
       await tx.wait();
 
-      const listingTx = await nftMarketplace.getListing(basicNft.address, nft1TokenId);
+      const listingTx = await nftMarketplace.getListing(1);
       expect(listingTx.seller).to.be.equals(owner.address) && expect(listingTx.price).to.be.equals(listPrice);
     });
 
     it("Buyer should buy NFT ", async () => {
       const tx = await nftMarketplace
         .connect(buyer1)
-        .buyItem(basicNft.address, nft1TokenId, { value: ethers.utils.parseEther("0.1") });
+        .buyItem(1, basicNft.address, nft1TokenId, { value: ethers.utils.parseEther("0.1") });
       await tx.wait();
       const newOwner = await basicNft.ownerOf(nft1TokenId);
       const contractBalance = await ethers.provider.getBalance(nftMarketplace.address);
