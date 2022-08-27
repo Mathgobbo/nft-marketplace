@@ -16,9 +16,12 @@ error PriceMustBeAboveZero();
 
 contract NftMarketplace is ReentrancyGuard {
     //Structs
-    struct Listing {
+    struct ListedItem {
+        uint256 tokenId;
+        address contractAddress;
         uint256 price;
         address seller;
+        bool forSale;
     }
 
     //Events
@@ -41,10 +44,8 @@ contract NftMarketplace is ReentrancyGuard {
     );
 
     // State Variables
-    // - Contracts (Collections) listed
-    address[] private contracts;
-    // - Contract Address => (tokenId => Listing)
-    mapping(address => mapping(uint256 => Listing)) private s_listings;
+    // - ListedItems Array
+    ListedItem[] private listedItems;
     // - Sellers address => AmountInSales
     mapping(address => uint256) private s_proceeds;
 
@@ -54,7 +55,15 @@ contract NftMarketplace is ReentrancyGuard {
         uint256 tokenId,
         address owner
     ) {
-        Listing memory listing = s_listings[nftAddress][tokenId];
+        ListedItem memory listing;
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                listing = listedItems[i];
+            }
+        }
         if (listing.price > 0) {
             revert AlreadyListed(nftAddress, tokenId);
         }
@@ -73,7 +82,15 @@ contract NftMarketplace is ReentrancyGuard {
         _;
     }
     modifier isListed(address nftAddress, uint256 tokenId) {
-        Listing memory listing = s_listings[nftAddress][tokenId];
+        ListedItem memory listing;
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                listing = listedItems[i];
+            }
+        }
         if (listing.price <= 0) {
             revert NotListed(nftAddress, tokenId);
         }
@@ -97,7 +114,9 @@ contract NftMarketplace is ReentrancyGuard {
         if (nft.getApproved(tokenId) != address(this)) {
             revert NotApprovedForMarketplace();
         }
-        s_listings[nftAddress][tokenId] = Listing(price, msg.sender);
+        listedItems.push(
+            ListedItem(tokenId, nftAddress, price, msg.sender, true)
+        );
         emit ItemListed(msg.sender, nftAddress, tokenId, price);
     }
 
@@ -106,7 +125,15 @@ contract NftMarketplace is ReentrancyGuard {
         isOwner(nftAddress, tokenId, msg.sender)
         isListed(nftAddress, tokenId)
     {
-        delete (s_listings[nftAddress][tokenId]);
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                listedItems[i] = listedItems[listedItems.length - 1];
+                listedItems.pop();
+            }
+        }
         emit ItemCanceled(msg.sender, nftAddress, tokenId);
     }
 
@@ -116,18 +143,34 @@ contract NftMarketplace is ReentrancyGuard {
         isListed(nftAddress, tokenId)
         nonReentrant
     {
-        Listing memory listedItem = s_listings[nftAddress][tokenId];
+        ListedItem memory listedItem;
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                listedItem = listedItems[i];
+            }
+        }
         if (msg.value < listedItem.price) {
             revert PriceNotMet(nftAddress, tokenId, listedItem.price);
         }
 
         s_proceeds[listedItem.seller] += msg.value;
-        delete (s_listings[nftAddress][tokenId]);
         IERC721(nftAddress).safeTransferFrom(
             listedItem.seller,
             msg.sender,
             tokenId
         );
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                listedItems[i].forSale = false;
+                listedItems[i].seller = msg.sender;
+            }
+        }
         emit ItemBought(msg.sender, nftAddress, tokenId, listedItem.price);
     }
 
@@ -145,7 +188,14 @@ contract NftMarketplace is ReentrancyGuard {
             revert PriceMustBeAboveZero();
         }
 
-        s_listings[nftAddress][tokenId].price = newPrice;
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                listedItems[i].price = newPrice;
+            }
+        }
         emit ItemListed(msg.sender, nftAddress, tokenId, newPrice);
     }
 
@@ -163,13 +213,36 @@ contract NftMarketplace is ReentrancyGuard {
     function getListing(address nftAddress, uint256 tokenId)
         external
         view
-        returns (Listing memory)
+        returns (ListedItem memory)
     {
-        return s_listings[nftAddress][tokenId];
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (
+                listedItems[i].contractAddress == nftAddress &&
+                listedItems[i].tokenId == tokenId
+            ) {
+                return listedItems[i];
+            }
+        }
+        revert("Not found");
     }
 
-    function getAllListedNfts() public view {
-        for (uint i = 0; i < contracts.length; i++) {}
+    function getAllItemsListed() public view returns (ListedItem[] memory) {
+        uint256 resultCount;
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (listedItems[i].forSale) {
+                resultCount++;
+            }
+        }
+        ListedItem[] memory items = new ListedItem[](resultCount);
+        uint256 j;
+
+        for (uint i = 0; i < listedItems.length; i++) {
+            if (listedItems[i].forSale) {
+                items[j] = listedItems[i];
+                j++;
+            }
+        }
+        return items;
     }
 
     function getProceeds(address seller) external view returns (uint256) {
