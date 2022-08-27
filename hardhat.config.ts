@@ -1,6 +1,6 @@
-import { HardhatUserConfig } from "hardhat/config";
 import dotenv from "dotenv";
 dotenv.config();
+import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
@@ -12,9 +12,19 @@ const config: HardhatUserConfig = {
     localhost: {
       chainId: 31337,
     },
+    mumbai: {
+      url: "https://polygon-mumbai.g.alchemy.com/v2/7iSDvUtKC57d6UPDf4oqzaHu4TbsV7bN",
+      accounts: [process.env.ACCOUNT_PRIVATE_KEY as string],
+    },
   },
   gasReporter: {
     enabled: true,
+    currency: "USD",
+    token: "MATIC",
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+  },
+  etherscan: {
+    apiKey: process.env.POLYGONSCAN_API_KEY,
   },
 };
 

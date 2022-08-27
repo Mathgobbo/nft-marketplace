@@ -14,13 +14,15 @@ Stacks Used:
 ### Roadmap🗺️
 
 #### Smart Contract
+- [ ] Deploy to Polygon with Alchemy
 - [x] NFT Marketplace main functions (List and Buy) 
 - [ ] Apply Fee for each transaction
 - [ ] Let users receive royalties (Needs study)
 
 #### Frontend
-- [ ] Connect user Wallet 
-- [ ] List NFT's for sale
+- [x] Connect user Wallet 
+- [x] List NFT's for sale
+- [ ] In Profile page List user NFT's (Using Alchemy API)
 - [ ] Let users list their NFT's
 - [ ] Let users buy NFT's
 - [ ] Let users mint their own NFT's

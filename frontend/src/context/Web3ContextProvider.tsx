@@ -1,9 +1,10 @@
 import { JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import { Contract, ethers, Signer } from "ethers";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { NFT_MARKETPLACE_ADDRESS } from "../configs/constants";
+import { MUMBAI_NETWORK_CHAIN_ID, NFT_MARKETPLACE_ADDRESS } from "../configs/constants";
 import NftMarketplaceABI from "../assets/NftMarketplace.json";
 import { NoMetaMaskError } from "../errors/NoMetaMaskError";
+import { DifferentNetworkError } from "../errors/DifferentNetworkError";
 interface IProps {
   children: ReactNode;
 }
@@ -29,7 +30,7 @@ export const Web3ContextProvider = ({ children }: IProps) => {
   const verifyProviderAndAccount = async () => {
     const { ethereum } = window as any;
     if (!ethereum) {
-      setProvider(new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545"));
+      setProvider(new ethers.providers.JsonRpcProvider());
       return setError(new NoMetaMaskError());
     }
     setProvider(new ethers.providers.Web3Provider(ethereum));
@@ -38,6 +39,16 @@ export const Web3ContextProvider = ({ children }: IProps) => {
     if (allAccounts.length !== 0) {
       const account = allAccounts[0];
       setAccount(account);
+    }
+  };
+
+  const verifyNetwork = async () => {
+    const network = await provider?.getNetwork();
+    if (network?.chainId != MUMBAI_NETWORK_CHAIN_ID) {
+      setError(new DifferentNetworkError());
+      provider?.on("network", (newNetwork, oldNetwork) => {
+        if (oldNetwork) window.location.reload();
+      });
     }
   };
 
@@ -65,6 +76,7 @@ export const Web3ContextProvider = ({ children }: IProps) => {
       setSigner(signer);
       const contract = new ethers.Contract(NFT_MARKETPLACE_ADDRESS, NftMarketplaceABI.abi, signer);
       setNftMarketplaceContract(contract);
+      verifyNetwork();
     }
   }, [provider]);
 

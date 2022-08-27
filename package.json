@@ -6,7 +6,8 @@
   "scripts": {
     "deploy": "yarn hardhat run scripts/deploy.ts",
     "deploy-mumbai": "yarn hardhat run scripts/deployMumbai.ts --network mumbai",
-    "test": "yarn hardhat test"
+    "test": "yarn hardhat test",
+    "compile": "yarn hardhat compile"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.7.0",

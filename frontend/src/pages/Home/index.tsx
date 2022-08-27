@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { useWeb3 } from "../../context/Web3ContextProvider";
 import basicNft2 from "../../assets/BasicNft2.json";
 export const Home = () => {
-  const { nftMarketplaceContract, signer } = useWeb3();
+  const { nftMarketplaceContract, signer, provider } = useWeb3();
   const [loading, setLoading] = useState(false);
   const [nfts, setNfts] = useState([]);
 
   const getListedItems = async () => {
     try {
+      console.log(await provider?.getNetwork());
       setLoading(true);
       console.log(nftMarketplaceContract);
       const response = await nftMarketplaceContract?.getAllItemsListed();
@@ -27,16 +28,6 @@ export const Home = () => {
   };
 
   const listNft = async () => {
-    const contract = new ethers.Contract("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512", basicNft2.abi, signer);
-    const tx = await contract.approve(nftMarketplaceContract?.address, 1);
-    await tx.wait(1);
-    console.log(tx);
-
-    const listPrice = ethers.utils.parseEther("0.1");
-    const listTx = await nftMarketplaceContract?.listItem("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512", 1, listPrice);
-    await listTx.wait();
-
-    console.log(listTx);
     getListedItems();
   };
 
