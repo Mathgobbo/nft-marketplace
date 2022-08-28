@@ -3,32 +3,20 @@ import { useEffect, useState } from "react";
 import { useWeb3 } from "../../context/Web3ContextProvider";
 import basicNft2 from "../../assets/BasicNft2.json";
 export const Home = () => {
-  const { nftMarketplaceContract, signer, provider } = useWeb3();
+  const { nftMarketplaceContract, signer } = useWeb3();
   const [loading, setLoading] = useState(false);
   const [nfts, setNfts] = useState([]);
 
   const getListedItems = async () => {
     try {
-      console.log(await provider?.getNetwork());
       setLoading(true);
-      console.log(nftMarketplaceContract);
       const response = await nftMarketplaceContract?.getAllItemsListed();
       setNfts(response);
-    } catch (err) {
+    } catch (err: any) {
       console.log(err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const mintNft = async () => {
-    const contract = new ethers.Contract("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512", basicNft2.abi, signer);
-    const mintTx = await contract.mintNft();
-    await mintTx.wait();
-  };
-
-  const listNft = async () => {
-    getListedItems();
   };
 
   useEffect(() => {
@@ -38,8 +26,6 @@ export const Home = () => {
   return (
     <div className="px-8 py-6">
       <h1 className="text-2xl font-bold mb-4">Listed NFT's for Sale</h1>
-      <button onClick={listNft}>List your NFT</button>
-      <button onClick={mintNft}>Mint example NFT</button>
       {loading && <p>Loading...</p>}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {!!nfts &&

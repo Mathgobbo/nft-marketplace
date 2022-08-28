@@ -5,6 +5,7 @@ import { MUMBAI_NETWORK_CHAIN_ID, NFT_MARKETPLACE_ADDRESS } from "../configs/con
 import NftMarketplaceABI from "../assets/NftMarketplace.json";
 import { NoMetaMaskError } from "../errors/NoMetaMaskError";
 import { DifferentNetworkError } from "../errors/DifferentNetworkError";
+import { NftMarketplace } from "../contracts";
 interface IProps {
   children: ReactNode;
 }
@@ -12,10 +13,11 @@ interface IProps {
 interface Web3ContextProps {
   provider: JsonRpcProvider | Web3Provider | undefined;
   signer: Signer | undefined;
-  nftMarketplaceContract: Contract | undefined;
+  nftMarketplaceContract: NftMarketplace | undefined;
   requestWalletConnection: () => Promise<void>;
   account: any;
   error: Error | null;
+  setError: (value: Error | null) => void;
 }
 
 const Web3Context = createContext<Web3ContextProps>({} as Web3ContextProps);
@@ -23,7 +25,7 @@ const Web3Context = createContext<Web3ContextProps>({} as Web3ContextProps);
 export const Web3ContextProvider = ({ children }: IProps) => {
   const [provider, setProvider] = useState<JsonRpcProvider | Web3Provider>();
   const [signer, setSigner] = useState<Signer>();
-  const [nftMarketplaceContract, setNftMarketplaceContract] = useState<Contract>();
+  const [nftMarketplaceContract, setNftMarketplaceContract] = useState<NftMarketplace>();
   const [account, setAccount] = useState();
   const [error, setError] = useState<Error | null>(null);
 
@@ -75,13 +77,15 @@ export const Web3ContextProvider = ({ children }: IProps) => {
       const signer = provider.getSigner();
       setSigner(signer);
       const contract = new ethers.Contract(NFT_MARKETPLACE_ADDRESS, NftMarketplaceABI.abi, signer);
-      setNftMarketplaceContract(contract);
+      setNftMarketplaceContract(contract as NftMarketplace);
       verifyNetwork();
     }
   }, [provider]);
 
   return (
-    <Web3Context.Provider value={{ provider, signer, nftMarketplaceContract, requestWalletConnection, account, error }}>
+    <Web3Context.Provider
+      value={{ provider, signer, nftMarketplaceContract, requestWalletConnection, account, error, setError }}
+    >
       {children}
     </Web3Context.Provider>
   );

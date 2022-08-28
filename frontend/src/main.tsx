@@ -7,6 +7,7 @@ import { Home } from "./pages/Home";
 import { Profile } from "./pages/Profile";
 import { Header } from "./components/Header";
 import { Web3ContextProvider } from "./context/Web3ContextProvider";
+import { ErrorBanner } from "./components/ErrorBanner";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
           <Route path="/" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
+        <ErrorBanner />
       </Web3ContextProvider>
     </BrowserRouter>
   </React.StrictMode>

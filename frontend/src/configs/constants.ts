@@ -2,3 +2,6 @@ export const NFT_MARKETPLACE_ADDRESS = "0x8b638775D8874F435af7f2bCF1b5822B2312c4
 
 export const POLYGON_NETWORK_CHAIN_ID = 137;
 export const MUMBAI_NETWORK_CHAIN_ID = 80001;
+
+const ALCHEMY_MUMBAI_API_KEY = "7iSDvUtKC57d6UPDf4oqzaHu4TbsV7bN";
+export const ALCHEMY_API_URL = `https://polygon-mumbai.g.alchemy.com/nft/v2/${ALCHEMY_MUMBAI_API_KEY}`;
